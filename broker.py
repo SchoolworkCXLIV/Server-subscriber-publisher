@@ -39,14 +39,17 @@ def readLine(sk):
 
 def addSubscriber(topic, sock):
     with subscribers_lock:
-        subscribers.setdefault(topic, []).append(sock)
+        # subscribers.setdefault(topic, []).append(sock)
+        if topic not in subscribers:
+            subscribers[topic] = []
+        subscribers[topic].append(sock)
     logging.info(f"nuova sottoscrizione al topic '{topic}'")
 
 
 def removeSubscriber(sock):
     """Toglie il socket da tutti i topic (chiamata quando il client si disconnette)."""
     with subscribers_lock:
-        for topic in list(subscribers):
+        for topic in subscribers.keys():
             if sock in subscribers[topic]:
                 subscribers[topic].remove(sock)
             if not subscribers[topic]:
@@ -58,7 +61,7 @@ def publish(topic, message):
     line = f"{topic}:{message}\n".encode('ascii', errors='replace')
     with subscribers_lock:
         targets = list(subscribers.get(topic, []))   # copia: invio fuori dal lock
-    for s in targets:
+    for s in targets: # cicla i sottoscritti al topic
         try:
             s.sendall(line)
         except OSError:
@@ -68,7 +71,6 @@ def publish(topic, message):
 
 
 class ClientThread(threading.Thread):
-    """Un thread per ogni client connesso (publisher o subscriber)."""
 
     def __init__(self, sock, addr):
         threading.Thread.__init__(self, name=f"client-{addr[0]}:{addr[1]}")
@@ -77,21 +79,23 @@ class ClientThread(threading.Thread):
 
     def run(self):
         logging.info("client connesso")
-        while True:
-            line = readLine(self.sock)
+        while True: # ciclo continuo
+            line = readLine(self.sock) # riceve il messaggio
             if not line:
                 break   # client disconnesso
 
-            text = line.decode('ascii', errors='replace')
+            text = line.decode('ascii', errors='replace') # da byte a testo
             logging.debug(f"ricevuto: {text}")
 
             # maxsplit=2: il messaggio puo' contenere dei ':' senza essere spezzato
-            parts = text.split(':', 2)
-            cmd = parts[0]
+            parts = text.split(':', 2) # "sub:meteo" --> ['sub', 'meteo']
+            # TODO: lo fa al massimo due in modo da consentire eventuale testo con :, ma è poco scalabile
+            cmd = parts[0] # il primo pezzo è il comando (pub o sub)
 
             if cmd == 'sub' and len(parts) == 2 and parts[1]:
+                # richiede max 2 pessi (cmd e topic) e il topic non deve essere vuoto
                 addSubscriber(parts[1], self.sock)
-            elif cmd == 'pub' and len(parts) == 3 and parts[1]:
+            elif cmd == 'pub' and len(parts) == 3 and parts[1]: # se il comando è pub richiede 3 elementi (cmd, topic, messaggio)
                 publish(parts[1], parts[2])
             else:
                 logging.warning(f"comando non valido: {text}")

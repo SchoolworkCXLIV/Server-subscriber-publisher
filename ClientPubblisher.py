@@ -18,8 +18,7 @@ def Main():
         sys.exit(1)
 
     address, topic, message = sys.argv[1], sys.argv[2], sys.argv[3]
-
-    # l'indirizzo puo' essere "host" oppure "host:porta"
+    # l'indirizzo dell'utente puo' essere "host" oppure "host:porta"
     if ':' in address:
         host, port = address.split(':')
         port = int(port)
