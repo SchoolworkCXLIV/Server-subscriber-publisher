@@ -12,7 +12,7 @@ DEFAULT_PORT = 5000
 
 
 def readLine(sk):
-    """Legge dal socket fino al '\\n'. Ritorna b'' se il broker chiude la connessione."""
+    # Legge dal socket fino al '\n'. Ritorna b'' se il broker chiude la connessione.
     data = b''
     while b'\n' not in data:
         packet = sk.recv(1)

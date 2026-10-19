@@ -20,21 +20,20 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Stato condiviso tra i thread: { "topic": [socket_sub1, socket_sub2, ...] }
-# Poiche' piu' thread lo modificano insieme, ogni accesso va protetto con il lock.
+# stato condiviso tra i thread: { "topic": [socket_sub1, socket_sub2, ...] }
+# usa lock perchè più thread potrebbero modificarlo contermporaneamente
 subscribers = {}
 subscribers_lock = threading.Lock()
 
-
 def readLine(sk):
-    """Legge dal socket fino al '\\n'. Ritorna b'' se il client si disconnette."""
+    # Legge dal socket fino al '\n'. Ritorna b'' se il client si disconnette
     data = b''
     while b'\n' not in data:
         packet = sk.recv(1)
         if not packet:
             return b''
         data += packet
-    return data.strip()
+    return data.strip() # rimuove eventuali spazi bianchi iniziali/finali (incluso '\n')
 
 
 def addSubscriber(topic, sock):
@@ -47,7 +46,7 @@ def addSubscriber(topic, sock):
 
 
 def removeSubscriber(sock):
-    """Toglie il socket da tutti i topic (chiamata quando il client si disconnette)."""
+    # Toglie il socket da tutti i topic (chiamata quando il client si disconnette).
     with subscribers_lock:
         for topic in subscribers.keys():
             if sock in subscribers[topic]:
@@ -57,10 +56,10 @@ def removeSubscriber(sock):
 
 
 def publish(topic, message):
-    """Inoltra il messaggio a tutti i subscriber del topic."""
+    # inoltra il messaggio a tutti i subscriber del topic.
     line = f"{topic}:{message}\n".encode('ascii', errors='replace')
     with subscribers_lock:
-        targets = list(subscribers.get(topic, []))   # copia: invio fuori dal lock
+        targets = list(subscribers.get(topic, []))   # copia la lista di sottoscritti al topic (per evitare problemi col lock)
     for s in targets: # cicla i sottoscritti al topic
         try:
             s.sendall(line)
@@ -89,17 +88,18 @@ class ClientThread(threading.Thread):
 
             # maxsplit=2: il messaggio puo' contenere dei ':' senza essere spezzato
             parts = text.split(':', 2) # "sub:meteo" --> ['sub', 'meteo']
-            # TODO: lo fa al massimo due in modo da consentire eventuale testo con :, ma è poco scalabile
             cmd = parts[0] # il primo pezzo è il comando (pub o sub)
 
             if cmd == 'sub' and len(parts) == 2 and parts[1]:
-                # richiede max 2 pessi (cmd e topic) e il topic non deve essere vuoto
+                # richiede max 2 pezzi (cmd e topic) e il topic non deve essere vuoto
                 addSubscriber(parts[1], self.sock)
             elif cmd == 'pub' and len(parts) == 3 and parts[1]: # se il comando è pub richiede 3 elementi (cmd, topic, messaggio)
                 publish(parts[1], parts[2])
             else:
                 logging.warning(f"comando non valido: {text}")
-                # TODO: rispondere al client con un messaggio di errore (es. 'ERR\n')
+                self.sock.sendall(b'ERR\n') 
+                self.sock.sendall(b'comando non valido \n') 
+
 
         removeSubscriber(self.sock)
         self.sock.close()
@@ -119,7 +119,7 @@ def Main():
 
     while True:
         try:
-            c, addr = s.accept()
+            c, addr = s.accept() # s.accept() contiene un ciclo bloccante che attende la connessione di un client
             ClientThread(c, addr).start()
         except KeyboardInterrupt:
             logging.info("chiusura del broker (Ctrl+C)")
