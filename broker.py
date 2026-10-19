@@ -48,7 +48,7 @@ def addSubscriber(topic, sock):
 def removeSubscriber(sock):
     # Toglie il socket da tutti i topic (chiamata quando il client si disconnette).
     with subscribers_lock:
-        for topic in subscribers.keys():
+        for topic in list(subscribers): # usa una copia delle chiavi per evitare che la size del dizionari cambi durante l'iterazione
             if sock in subscribers[topic]:
                 subscribers[topic].remove(sock)
             if not subscribers[topic]:
