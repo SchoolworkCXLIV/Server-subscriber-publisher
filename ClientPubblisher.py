@@ -2,8 +2,8 @@
 #
 # ClientPubblisher.py - invia UN messaggio su un topic e termina
 #
-# Uso:  python3 ClientPubblisher.py <indirizzo_broker> <topic> <messaggio>
-# Es.:  python3 ClientPubblisher.py 127.0.0.1 meteo "oggi c'e' il sole"
+# uso:  python3 ClientPubblisher.py <indirizzo_broker> <topic> <messaggio>
+# es.:  python3 ClientPubblisher.py 127.0.0.1 meteo "oggi c'e' il sole"
 #       python3 ClientPubblisher.py 127.0.0.1:5000 meteo "ciao"
 
 import socket
@@ -25,7 +25,9 @@ def Main():
     else:
         host, port = address, DEFAULT_PORT
 
-    # TODO: controllare che topic non contenga ':' o '\n' (romperebbe il protocollo)
+    if ':' in topic or '\n' in topic:
+        print("Errore: il topic non puo' contenere ':' o '\\n'")
+        sys.exit(1)
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

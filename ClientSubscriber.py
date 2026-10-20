@@ -2,8 +2,8 @@
 #
 # ClientSubscriber.py - si sottoscrive a un topic e stampa i messaggi ricevuti
 #
-# Uso:  python3 ClientSubscriber.py <indirizzo_broker> <topic>
-# Es.:  python3 ClientSubscriber.py 127.0.0.1 meteo
+# uso:  python3 ClientSubscriber.py <indirizzo_broker> <topic>
+# es.:  python3 ClientSubscriber.py 127.0.0.1 meteo
 
 import socket
 import sys
@@ -12,7 +12,7 @@ DEFAULT_PORT = 5000
 
 
 def readLine(sk):
-    # Legge dal socket fino al '\n'. Ritorna b'' se il broker chiude la connessione.
+    # legge dal socket fino al '\n'. ritorna b'' se il broker chiude la connessione
     data = b''
     while b'\n' not in data:
         packet = sk.recv(1)

@@ -2,10 +2,10 @@
 #
 # broker.py - server TCP publisher/subscriber
 #
-# Protocollo (ogni messaggio termina con '\n'):
-#   sub:topic            -> il client si sottoscrive a "topic"
-#   pub:topic:message    -> il client pubblica "message" su "topic"
-# Il broker inoltra ai subscriber la riga:  topic:message\n
+# protocollo: (ogni messaggio termina con '\n'):
+#   sub:topic -> il client si sottoscrive a "topic"
+#   pub:topic:message -> il client pubblica "message" su "topic"
+# il broker inoltra ai subscriber la riga: topic:message\n
 
 import threading
 import socket
@@ -26,7 +26,7 @@ subscribers = {}
 subscribers_lock = threading.Lock()
 
 def readLine(sk):
-    # Legge dal socket fino al '\n'. Ritorna b'' se il client si disconnette
+    # legge dal socket fino al '\n'. Ritorna b'' se il client si disconnette
     data = b''
     while b'\n' not in data:
         packet = sk.recv(1)
@@ -46,20 +46,20 @@ def addSubscriber(topic, sock):
 
 
 def removeSubscriber(sock):
-    # Toglie il socket da tutti i topic (chiamata quando il client si disconnette).
+    # toglie il socket di un thread da tutti i topic (chiamata quando il client si disconnette)
     with subscribers_lock:
         for topic in list(subscribers): # usa una copia delle chiavi per evitare che la size del dizionari cambi durante l'iterazione
             if sock in subscribers[topic]:
                 subscribers[topic].remove(sock)
             if not subscribers[topic]:
-                del subscribers[topic]   # nessun iscritto: elimino il topic
+                del subscribers[topic] # nessun iscritto: elimino il topic
 
 
 def publish(topic, message):
-    # inoltra il messaggio a tutti i subscriber del topic.
+    # inoltra il messaggio a tutti i subscriber del topic
     line = f"{topic}:{message}\n".encode('ascii', errors='replace')
     with subscribers_lock:
-        targets = list(subscribers.get(topic, []))   # copia la lista di sottoscritti al topic (per evitare problemi col lock)
+        targets = list(subscribers.get(topic, [])) # copia la lista di sottoscritti al topic (per evitare problemi col lock)
     for s in targets: # cicla i sottoscritti al topic
         try:
             s.sendall(line)
@@ -81,7 +81,7 @@ class ClientThread(threading.Thread):
         while True: # ciclo continuo
             line = readLine(self.sock) # riceve il messaggio
             if not line:
-                break   # client disconnesso
+                break # client disconnesso
 
             text = line.decode('ascii', errors='replace') # da byte a testo
             logging.debug(f"ricevuto: {text}")
@@ -119,7 +119,7 @@ def Main():
 
     while True:
         try:
-            c, addr = s.accept() # s.accept() contiene un ciclo bloccante che attende la connessione di un client
+            c, addr = s.accept() # s.accept() ciclo bloccante 
             ClientThread(c, addr).start()
         except KeyboardInterrupt:
             logging.info("chiusura del broker (Ctrl+C)")
